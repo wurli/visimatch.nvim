@@ -24,7 +24,7 @@ local config = {
     strict_spacing = false
 }
 
----@param opts VisimatchConfig
+---@param opts? VisimatchConfig
 M.setup = function(opts)
     config = vim.tbl_extend("force", config, opts or {})
 end
