@@ -3,6 +3,8 @@
 A tiny plugin which highlights any text in the current buffer which matches
 the text you currently have selected in visual mode.
 
+![visimatch](https://github.com/user-attachments/assets/c9547434-950c-4205-945d-097481baf85e)
+
 ## Installation
 
 Using Lazy:
@@ -19,7 +21,9 @@ Using Lazy:
 Here's the default configuration:
 
 ``` lua
-opts {
+-- Pass this to require("visimatch").setup() or use it as the `opts` field
+-- in the Lazy.nvim plugin spec above
+opts = {
     -- The highlight group to apply to matched text
     hl_group = "Search",
     -- The minimum number of selected characters required to trigger highlighting
