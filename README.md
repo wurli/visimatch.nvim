@@ -42,7 +42,7 @@ opts = {
 Note that visimatch won't trigger in situations where the cursor doesn't move.
 In particular, this means that entering `viw` when the cursor is already at the
 end of the word won't trigger visimatch. In such situations, just move the
-cursor and highlights will trigger 💫 NB, this is a limiation of Neovim which I
+cursor and highlights will trigger 💫 NB, this is a limitation of Neovim which I
 don't think is worth adding a workaround for yet. Hopefully this will be
 [addressed](https://github.com/neovim/neovim/issues/19708) on the vim/Neovim
 side eventually.
