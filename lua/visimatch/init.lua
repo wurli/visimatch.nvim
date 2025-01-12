@@ -65,7 +65,10 @@ end
 
 local match_ns = vim.api.nvim_create_namespace("visual-matches")
 
+local group_id = vim.api.nvim_create_augroup("visimatch", { clear = true })
+
 vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
+    group = group_id,
     callback = function()
         vim.api.nvim_buf_clear_namespace(0, match_ns, 0, -1)
 
