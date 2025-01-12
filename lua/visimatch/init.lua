@@ -21,7 +21,13 @@ local M = {}
 ---* `"filetype"` (the default): highlight buffers with the same filetype
 ---* `"current"`: highlight matches in the current buffer only
 ---* `"all"`: highlight matches in all visible buffers
----@field buffers "filetype" | "all" | "current"
+---@field buffers? "filetype" | "all" | "current"
+---
+---Case-(in)sensitivity for matches. Valid options:
+---* `true`: matches will never be case-sensitive
+---* `false`/`{}`: matches will always be case-sensitive
+---* a table of filetypes to use use case-insensitive matching for
+---@field case_insensitive? boolean | string[]
 
 ---@type VisimatchConfig
 local config = {
@@ -29,16 +35,25 @@ local config = {
     chars_lower_limit = 6,
     lines_upper_limit = 30,
     strict_spacing = false,
-    buffers = "filetype"
+    buffers = "filetype",
+    case_insensitive = { "markdown", "text", "help" },
 }
 
 ---@param opts? VisimatchConfig
 M.setup = function(opts)
     config = vim.tbl_extend("force", config, opts or {})
+    vim.validate({
+        hl_group          = { config.hl_group,          "string" },
+        chars_lower_limit = { config.chars_lower_limit, "number" },
+        lines_upper_limit = { config.lines_upper_limit, "number" },
+        strict_spacing    = { config.strict_spacing,    "boolean" },
+        buffers           = { config.buffers,           "string" },
+        case_insensitive  = { config.case_insensitive,  { "boolean", "table" } },
+    })
 end
 
 ---@alias TextPoint { line: number, col: number }
----@alias TextRegion { start: TextPoint, end: TextPoint }
+---@alias TextRegion { start: TextPoint, stop: TextPoint }
 
 ---@param x string[] A table of strings; each string represents a line
 ---@param pattern string The pattern to match against
@@ -81,8 +96,10 @@ local get_wins = function(how)
     local all_wins = vim.api.nvim_tabpage_list_wins(0)
 
     if how == "filetype" then
-        local curr_ft = vim.bo[vim.api.nvim_get_current_buf()].ft
-        return vim.tbl_filter(function(w) return vim.bo[vim.api.nvim_win_get_buf(w)].ft == curr_ft end, all_wins)
+        return vim.tbl_filter(
+            function(w) return vim.bo[vim.api.nvim_win_get_buf(w)].ft == vim.bo.ft end,
+            all_wins
+        )
     end
 
     if how == "all" then
@@ -90,6 +107,17 @@ local get_wins = function(how)
     end
 
     error(("Invalid input for `how`: `%s`"):format(vim.inspect(how)))
+end
+
+local is_case_insensitive = function(ft1, ft2)
+    if type(config.case_insensitive) == "boolean" then return config.case_insensitive end
+    if type(config.case_insensitive) == "table" then
+        ---@diagnostic disable-next-line: param-type-mismatch
+        for _, special_ft in ipairs(config.case_insensitive) do
+            if ft1 == special_ft or ft2 == special_ft then return true end
+        end
+    end
+    return false
 end
 
 
@@ -108,23 +136,28 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
         if mode ~= "v" and mode ~= "V" then return end
 
         local selection_start, selection_stop = vim.fn.getpos("v"), vim.fn.getpos(".")
-        local selection_text = vim.fn.getregion(selection_start, selection_stop, { type = mode })
+        local selection = vim.fn.getregion(selection_start, selection_stop, { type = mode })
+        local selection_collapsed = vim.trim(table.concat(selection, "\n"))
 
-        if #selection_text > config.lines_upper_limit then return end
-
-        local selection_collapsed = vim.trim(table.concat(selection_text, "\n"))
-
+        if #selection > config.lines_upper_limit           then return end
         if #selection_collapsed < config.chars_lower_limit then return end
 
-        local selection_pattern = selection_collapsed:gsub("(%p)", "%%%0")
-        selection_pattern       = config.strict_spacing and selection_pattern or selection_pattern:gsub("%s+", "%%s+")
+        local pattern = selection_collapsed:gsub("(%p)", "%%%0")
+        if config.strict_spacing then pattern = pattern:gsub("%s+", "%%s+") end
+        local pattern_lower
 
         for _, win in pairs(wins) do
-            local first_line   = math.max(0, vim.fn.line("w0", win) - #selection_text)
-            local last_line    = vim.fn.line("w$", win) + #selection_text
-            local win_buf      = vim.api.nvim_win_get_buf(win)
-            local visible_text = vim.api.nvim_buf_get_lines(win_buf, first_line, last_line, false)
-            local matches      = gfind(visible_text, selection_pattern, false)
+            local first_line       = math.max(0, vim.fn.line("w0", win) - #selection)
+            local last_line        = vim.fn.line("w$", win) + #selection
+            local buf              = vim.api.nvim_win_get_buf(win)
+            local visible_text     = vim.api.nvim_buf_get_lines(buf, first_line, last_line, false)
+            local case_insensitive = is_case_insensitive(vim.bo[buf].ft, vim.bo.ft)
+
+            if case_insensitive and not pattern_lower then pattern_lower = pattern:lower() end
+
+            local needle           = case_insensitive and pattern_lower or pattern
+            local haystack         = case_insensitive and vim.tbl_map(string.lower, visible_text) or visible_text
+            local matches          = gfind(haystack, needle, false)
 
             for _, m in pairs(matches) do
                 m.start.line, m.stop.line = m.start.line + first_line, m.stop.line + first_line
@@ -135,7 +168,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
                 if m_starts_after_selection or m_ends_before_selection then
                     for line = m.start.line, m.stop.line do
                         vim.api.nvim_buf_add_highlight(
-                            win_buf, match_ns, config.hl_group, line - 1,
+                            buf, match_ns, config.hl_group, line - 1,
                             line == m.start.line and m.start.col - 1 or 0,
                             line == m.stop.line and m.stop.col or -1
                         )
