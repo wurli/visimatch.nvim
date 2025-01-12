@@ -33,7 +33,12 @@ opts = {
     -- By default, visimatch will highlight text even if it doesn't have exactly
     -- the same spacing as the selected region. You can set this to `true` if
     -- you're not a fan of this behaviour :)
-    strict_spacing = false
+    strict_spacing = false,
+    -- Visible buffers which should be highlighted. Valid options:
+    -- * `"filetype"` (the default): highlight buffers with the same filetype
+    -- * `"current"`: highlight matches in the current buffer only
+    -- * `"all"`: highlight matches in all visible buffers
+    buffers = "filetype"
 }
 ```
 

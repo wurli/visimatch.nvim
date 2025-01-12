@@ -1,6 +1,7 @@
 local M = {}
 
 ---@class VisimatchConfig
+---
 ---The highlight group to apply to matched text; defaults to `Search`.
 ---@field hl_group? string
 ---
@@ -15,13 +16,20 @@ local M = {}
 ---If `false` (the default) text will be highlighted even if the spacing is not
 ---exactly the same as the text you have selected.
 ---@field strict_spacing? boolean
+---
+---Visible buffers which should be highlighted. Valid options:
+---* `"filetype"` (the default): highlight buffers with the same filetype
+---* `"current"`: highlight matches in the current buffer only
+---* `"all"`: highlight matches in all visible buffers
+---@field buffers "filetype" | "all" | "current"
 
 ---@type VisimatchConfig
 local config = {
     hl_group = "Search",
     chars_lower_limit = 6,
     lines_upper_limit = 30,
-    strict_spacing = false
+    strict_spacing = false,
+    buffers = "filetype"
 }
 
 ---@param opts? VisimatchConfig
@@ -63,14 +71,38 @@ local gfind = function(x, pattern, plain)
     return matches
 end
 
-local match_ns = vim.api.nvim_create_namespace("visual-matches")
+---@param how "all" | "current" | "filetype"
+local get_wins = function(how)
+    local curr_win = vim.api.nvim_get_current_win()
+    if how == "current" then
+        return { curr_win }
+    end
 
-local group_id = vim.api.nvim_create_augroup("visimatch", { clear = true })
+    local all_wins = vim.api.nvim_tabpage_list_wins(0)
+
+    if how == "filetype" then
+        local curr_ft = vim.bo[vim.api.nvim_get_current_buf()].ft
+        return vim.tbl_filter(function(w) return vim.bo[vim.api.nvim_win_get_buf(w)].ft == curr_ft end, all_wins)
+    end
+
+    if how == "all" then
+        return all_wins
+    end
+
+    error(("Invalid input for `how`: `%s`"):format(vim.inspect(how)))
+end
+
+
+local match_ns = vim.api.nvim_create_namespace("visimatch")
+local augroup = vim.api.nvim_create_augroup("visimatch", { clear = true })
 
 vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
-    group = group_id,
+    group = augroup,
     callback = function()
-        vim.api.nvim_buf_clear_namespace(0, match_ns, 0, -1)
+        local wins = get_wins(config.buffers)
+        for _, win in pairs(wins) do
+            vim.api.nvim_buf_clear_namespace(vim.api.nvim_win_get_buf(win), match_ns, 0, -1)
+        end
 
         local mode = vim.fn.mode()
         if mode ~= "v" and mode ~= "V" then return end
@@ -86,24 +118,28 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
 
         local selection_pattern = selection_collapsed:gsub("(%p)", "%%%0")
         selection_pattern       = config.strict_spacing and selection_pattern or selection_pattern:gsub("%s+", "%%s+")
-        local first_line        = math.max(0, vim.fn.line("w0", vim.api.nvim_get_current_win()) - #selection_text)
-        local last_line         = vim.fn.line("w$", vim.api.nvim_get_current_win()) + #selection_text
-        local visible_text      = vim.api.nvim_buf_get_lines(0, first_line, last_line, false)
-        local matches           = gfind(visible_text, selection_pattern, false)
 
-        for _, m in pairs(matches) do
-            m.start.line, m.stop.line = m.start.line + first_line, m.stop.line + first_line
+        for _, win in pairs(wins) do
+            local first_line   = math.max(0, vim.fn.line("w0", win) - #selection_text)
+            local last_line    = vim.fn.line("w$", win) + #selection_text
+            local win_buf      = vim.api.nvim_win_get_buf(win)
+            local visible_text = vim.api.nvim_buf_get_lines(win_buf, first_line, last_line, false)
+            local matches      = gfind(visible_text, selection_pattern, false)
 
-            local m_starts_after_selection = m.start.line > selection_stop[2]  or (m.start.line == selection_stop[2]  and m.start.col > selection_stop[3])
-            local m_ends_before_selection  = m.stop.line  < selection_start[2] or (m.stop.line  == selection_start[2] and m.stop.col  < selection_start[3])
+            for _, m in pairs(matches) do
+                m.start.line, m.stop.line = m.start.line + first_line, m.stop.line + first_line
 
-            if m_starts_after_selection or m_ends_before_selection then
-                for line = m.start.line, m.stop.line do
-                    vim.api.nvim_buf_add_highlight(
-                        0, match_ns, config.hl_group, line - 1,
-                        line == m.start.line and m.start.col - 1 or 0,
-                        line == m.stop.line and m.stop.col or -1
-                    )
+                local m_starts_after_selection = m.start.line > selection_stop[2]  or (m.start.line == selection_stop[2]  and m.start.col > selection_stop[3])
+                local m_ends_before_selection  = m.stop.line  < selection_start[2] or (m.stop.line  == selection_start[2] and m.stop.col  < selection_start[3])
+
+                if m_starts_after_selection or m_ends_before_selection then
+                    for line = m.start.line, m.stop.line do
+                        vim.api.nvim_buf_add_highlight(
+                            win_buf, match_ns, config.hl_group, line - 1,
+                            line == m.start.line and m.start.col - 1 or 0,
+                            line == m.stop.line and m.stop.col or -1
+                        )
+                    end
                 end
             end
         end
@@ -111,3 +147,4 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
 })
 
 return M
+
