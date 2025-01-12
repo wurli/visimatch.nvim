@@ -81,8 +81,8 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
 
         if #selection_collapsed < config.chars_lower_limit then return end
 
-        -- local selection_pattern = selection_collapsed:gsub("(%p)", "%%%0"):gsub("[ \t]+", "%%s+")
-        local selection_pattern = selection_collapsed:gsub("(%p)", "%%%0"):gsub("%s+", "%%s+")
+        local selection_pattern = selection_collapsed:gsub("(%p)", "%%%0")
+        selection_pattern       = config.strict_spacing and selection_pattern or selection_pattern:gsub("%s+", "%%s+")
         local first_line        = math.max(0, vim.fn.line("w0", vim.api.nvim_get_current_win()) - #selection_text)
         local last_line         = vim.fn.line("w$", vim.api.nvim_get_current_win()) + #selection_text
         local visible_text      = vim.api.nvim_buf_get_lines(0, first_line, last_line, false)
