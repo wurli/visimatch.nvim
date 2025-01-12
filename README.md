@@ -17,7 +17,6 @@ Using Lazy:
 ```
 
 ## Configuration
-
 Here's the default configuration:
 
 ``` lua
@@ -39,6 +38,11 @@ opts = {
     -- * `"current"`: highlight matches in the current buffer only
     -- * `"all"`: highlight matches in all visible buffers
     buffers = "filetype"
+    -- Case-(in)nsitivity for matches. Valid options:
+    -- * `true`: matches will never be case-sensitive
+    -- * `false`/`{}`: matches will always be case-sensitive
+    -- * a table of filetypes to use use case-insensitive matching for.
+    case_insensitive = { "markdown", "text", "help" },
 }
 ```
 
