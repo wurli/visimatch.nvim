@@ -1,7 +1,6 @@
 # visimatch.nvim
 
-A tiny plugin which highlights any text in the current buffer which matches
-the text you currently have selected in visual mode.
+A tiny plugin to highlight text matching the current selection in visual mode 💫
 
 ![visimatch](https://github.com/user-attachments/assets/c9547434-950c-4205-945d-097481baf85e)
 
@@ -52,7 +51,7 @@ Note that visimatch won't trigger in situations where the cursor doesn't move.
 In particular, this means that entering `viw` when the cursor is already at the
 end of the word won't trigger visimatch. In such situations, just move the
 cursor and highlights will trigger 💫 NB, this is a limitation of Neovim which I
-don't think is worth adding a workaround for yet. Hopefully this will be
-[addressed](https://github.com/neovim/neovim/issues/19708) on the vim/Neovim
-side eventually.
+don't think is worth adding a workaround for yet. Hopefully this will eventually
+be [addressed](https://github.com/neovim/neovim/issues/19708) on the vim/Neovim
+side.
 
