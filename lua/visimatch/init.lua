@@ -143,7 +143,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
         if #selection_collapsed < config.chars_lower_limit then return end
 
         local pattern = selection_collapsed:gsub("(%p)", "%%%0")
-        if config.strict_spacing then pattern = pattern:gsub("%s+", "%%s+") end
+        if not config.strict_spacing then pattern = pattern:gsub("%s+", "%%s+") end
         local pattern_lower
 
         for _, win in pairs(wins) do
