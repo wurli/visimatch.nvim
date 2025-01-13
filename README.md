@@ -15,7 +15,8 @@ Using Lazy:
 }
 ```
 
-## Configuration
+## Configuration / Features
+
 Here's the default configuration:
 
 ``` lua
