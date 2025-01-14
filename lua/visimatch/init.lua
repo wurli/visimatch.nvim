@@ -52,6 +52,54 @@ M.setup = function(opts)
     })
 end
 
+-- string.find() seems to have a bug/issue where you get a `pattern too
+-- complex` error if the pattern used is too long _and_ matches the text in
+-- question. NB, to see this in action you just need to use a regular
+-- string.find() in the algorithm and try selecting a tonne of repeated text.
+-- This is a workaround for this bug, which tries a normal `find()` call, and
+-- if it fails, tries again by splitting the pattern up into ~100 character
+-- chunks and checking them in sequence. This function isn't smart enough
+-- to handle arbitrary patterns - but it is smart enough to handle the patterns
+-- used in this plugin.
+local find2 = function(s, pattern, init, plain)
+    local ok, start, stop = pcall(string.find, s, pattern, init, plain)
+    if ok then return
+        start, stop
+    end
+
+    local needle_length = 100
+    local needle_start, any_matches = 1, false
+    local match_start
+    local match_stop = init and (init - 1) or nil
+
+    while needle_start < pattern:len() do
+        local needle_end = needle_start + needle_length
+
+        -- If the end of the new pattern intersects either `%<anything>` or
+        -- `%s+`, we need to extend the pattern by a few chars.
+        local _, extra1 = pattern:find("^.?%%s%+", needle_end - 1)
+        local _, extra2 = pattern:find("^[^%%]%%.", needle_end - 1)
+        needle_end = extra1 or extra2 or needle_end
+
+        local small_match_start, small_match_stop = s:find(
+            pattern:sub(needle_start, needle_end),
+            (match_stop or 0) + 1
+        )
+
+        if small_match_start then
+            match_start = match_start or small_match_start
+            match_stop = small_match_stop
+            any_matches = true
+        elseif any_matches then
+            return nil, nil
+        end
+
+        needle_start = needle_end + 1
+    end
+
+    return match_start, match_stop
+end
+
 ---@alias TextPoint { line: number, col: number }
 ---@alias TextRegion { start: TextPoint, stop: TextPoint }
 
@@ -63,7 +111,7 @@ local gfind = function(x, pattern, plain)
     local x_collapsed, matches, init = table.concat(x, "\n"), {}, 0
 
     while true do
-        local start, stop = x_collapsed:find(pattern, init, plain)
+        local start, stop = find2(x_collapsed, pattern, init, plain)
         if start == nil then break end
         table.insert(matches, { start = start, stop = stop })
         init = stop + 1
@@ -85,6 +133,7 @@ local gfind = function(x, pattern, plain)
 
     return matches
 end
+
 
 ---@param how "all" | "current" | "filetype"
 local get_wins = function(how)
