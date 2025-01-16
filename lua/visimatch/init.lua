@@ -63,8 +63,8 @@ end
 -- used in this plugin.
 local find2 = function(s, pattern, init, plain)
     local ok, start, stop = pcall(string.find, s, pattern, init, plain)
-    if ok then return
-        start, stop
+    if ok then
+        return start, stop
     end
 
     local needle_length = 100
@@ -72,7 +72,9 @@ local find2 = function(s, pattern, init, plain)
     local match_start
     local match_stop = init and (init - 1) or nil
 
+    local i = 0
     while needle_start < pattern:len() do
+        i = i + 1
         local needle_end = needle_start + needle_length
 
         -- If the end of the new pattern intersects either `%<anything>` or
@@ -137,24 +139,16 @@ end
 
 ---@param how "all" | "current" | "filetype"
 local get_wins = function(how)
-    local curr_win = vim.api.nvim_get_current_win()
     if how == "current" then
-        return { curr_win }
-    end
-
-    local all_wins = vim.api.nvim_tabpage_list_wins(0)
-
-    if how == "filetype" then
+        return { vim.api.nvim_get_current_win() }
+    elseif how == "all" then
+        return vim.api.nvim_tabpage_list_wins(0)
+    elseif how == "filetype" then
         return vim.tbl_filter(
             function(w) return vim.bo[vim.api.nvim_win_get_buf(w)].ft == vim.bo.ft end,
-            all_wins
+            vim.api.nvim_tabpage_list_wins(0)
         )
     end
-
-    if how == "all" then
-        return all_wins
-    end
-
     error(("Invalid input for `how`: `%s`"):format(vim.inspect(how)))
 end
 
@@ -187,6 +181,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
         local selection_start, selection_stop = vim.fn.getpos("v"), vim.fn.getpos(".")
         local selection = vim.fn.getregion(selection_start, selection_stop, { type = mode })
         local selection_collapsed = vim.trim(table.concat(selection, "\n"))
+        local selection_buf = vim.api.nvim_get_current_buf()
 
         if #selection > config.lines_upper_limit           then return end
         if #selection_collapsed < config.chars_lower_limit then return end
@@ -214,7 +209,7 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
                 local m_starts_after_selection = m.start.line > selection_stop[2]  or (m.start.line == selection_stop[2]  and m.start.col > selection_stop[3])
                 local m_ends_before_selection  = m.stop.line  < selection_start[2] or (m.stop.line  == selection_start[2] and m.stop.col  < selection_start[3])
 
-                if m_starts_after_selection or m_ends_before_selection then
+                if buf ~= selection_buf or m_starts_after_selection or m_ends_before_selection then
                     for line = m.start.line, m.stop.line do
                         vim.api.nvim_buf_add_highlight(
                             buf, match_ns, config.hl_group, line - 1,
