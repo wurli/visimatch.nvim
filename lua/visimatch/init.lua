@@ -21,7 +21,9 @@ local M = {}
 ---* `"filetype"` (the default): highlight buffers with the same filetype
 ---* `"current"`: highlight matches in the current buffer only
 ---* `"all"`: highlight matches in all visible buffers
----@field buffers? "filetype" | "all" | "current"
+---* A function. This will be passed a buffer number and should return
+---  `true`/`false` to indicate whether the buffer should be highlighted.
+---@field buffers? "filetype" | "all" | "current" | fun(buf): boolean
 ---
 ---Case-(in)sensitivity for matches. Valid options:
 ---* `true`: matches will never be case-sensitive
@@ -47,7 +49,7 @@ M.setup = function(opts)
         chars_lower_limit = { config.chars_lower_limit, "number" },
         lines_upper_limit = { config.lines_upper_limit, "number" },
         strict_spacing    = { config.strict_spacing,    "boolean" },
-        buffers           = { config.buffers,           "string" },
+        buffers           = { config.buffers,           { "string", "function" } },
         case_insensitive  = { config.case_insensitive,  { "boolean", "table" } },
     })
 end
@@ -136,8 +138,7 @@ local gfind = function(x, pattern, plain)
     return matches
 end
 
-
----@param how "all" | "current" | "filetype"
+---@param how "all" | "current" | "filetype" | fun(buf): boolean
 local get_wins = function(how)
     if how == "current" then
         return { vim.api.nvim_get_current_win() }
@@ -146,6 +147,13 @@ local get_wins = function(how)
     elseif how == "filetype" then
         return vim.tbl_filter(
             function(w) return vim.bo[vim.api.nvim_win_get_buf(w)].ft == vim.bo.ft end,
+            vim.api.nvim_tabpage_list_wins(0)
+        )
+    elseif type(how) == "function" then
+        return vim.tbl_filter(
+            function(w)
+                return how(vim.api.nvim_win_get_buf(w)) and true or false
+            end,
             vim.api.nvim_tabpage_list_wins(0)
         )
     end

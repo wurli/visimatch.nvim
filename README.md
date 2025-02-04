@@ -42,6 +42,8 @@ opts = {
     -- * `"filetype"` (the default): highlight buffers with the same filetype
     -- * `"current"`: highlight matches in the current buffer only
     -- * `"all"`: highlight matches in all visible buffers
+    -- * A function. This will be passed a buffer number and should return
+    --   `true`/`false` to indicate whether the buffer should be highlighted.
     buffers = "filetype"
     -- Case-(in)nsitivity for matches. Valid options:
     -- * `true`: matches will never be case-sensitive
