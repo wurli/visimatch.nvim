@@ -2,7 +2,7 @@
 
 A tiny plugin to highlight text matching the current selection in visual mode 💫
 
-![Uploading image.png…]()
+![250307_15h51m26s_screenshot](https://github.com/user-attachments/assets/a6846efa-0a50-45e7-8f64-446ea01bc96b)
 
 ![visimatch](https://github.com/user-attachments/assets/c9547434-950c-4205-945d-097481baf85e)
 
