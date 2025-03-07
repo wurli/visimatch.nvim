@@ -68,19 +68,23 @@ end
 local function toggle_selection_highlight(buf, start_pos, end_pos, visible)
     if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
     
+    -- Convert from 1-based to 0-based line numbers for API calls
+    local start_line = start_pos[2] - 1
+    local end_line = end_pos[2] - 1
+    
     -- Clear existing highlights
-    vim.api.nvim_buf_clear_namespace(buf, match_ns, start_pos[2] - 1, end_pos[2])
+    vim.api.nvim_buf_clear_namespace(buf, match_ns, start_line, end_line + 1)
     
     -- Add highlight if visible is true
     if visible then
-        for line = start_pos[2], end_pos[2] do
-            local col_start = line == start_pos[2] and start_pos[3] - 1 or 0
-            local col_end = line == end_pos[2] and end_pos[3] or -1
+        for line = start_line, end_line do
+            local col_start = (line == start_line) and start_pos[3] - 1 or 0
+            local col_end = (line == end_line) and end_pos[3] or -1
             vim.api.nvim_buf_add_highlight(
                 buf,
                 match_ns,
                 config.blink_hl_group,
-                line - 1,
+                line,
                 col_start,
                 col_end
             )
