@@ -1,6 +1,7 @@
 # visimatch.nvim
 
 A tiny plugin to highlight text matching the current selection in visual mode 💫
+![250307_15h51m26s_screenshot](https://github.com/user-attachments/assets/4e1091a6-982d-4d92-a3d1-c19700f8ef8f)
 
 ![visimatch](https://github.com/user-attachments/assets/c9547434-950c-4205-945d-097481baf85e)
 
