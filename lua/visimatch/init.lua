@@ -34,11 +34,11 @@ local M = {}
 ---@type VisimatchConfig
 local config = {
     hl_group = "Search",
-    chars_lower_limit = 6,
-    lines_upper_limit = 30,
+    chars_lower_limit = 4,
+    lines_upper_limit = 45,
     strict_spacing = false,
     buffers = "filetype",
-    case_insensitive = { "markdown", "text", "help" },
+    case_insensitive = { "markdown", "text", "help" , "oil" },
 }
 
 ---@param opts? VisimatchConfig
