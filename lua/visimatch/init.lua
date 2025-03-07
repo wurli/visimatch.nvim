@@ -30,6 +30,15 @@ local M = {}
 ---* `false`/`{}`: matches will always be case-sensitive
 ---* a table of filetypes to use use case-insensitive matching for
 ---@field case_insensitive? boolean | string[]
+---
+---Enable blinking for the main selection
+---@field blink_enabled? boolean
+---
+---Blink interval in milliseconds
+---@field blink_interval? number
+---
+---Highlight group for the blinking selection; defaults to `Visual`
+---@field blink_hl_group? string
 
 ---@type VisimatchConfig
 local config = {
@@ -39,10 +48,50 @@ local config = {
     strict_spacing = false,
     buffers = "filetype",
     case_insensitive = { "markdown", "text", "help" , "oil" },
+    blink_enabled = true,
+    blink_interval = 500,
+    blink_hl_group = "Visual",
 }
+
+-- Store the blink timer
+local blink_timer = nil
+local blink_state = false
+
+local function clear_blink_timer()
+    if blink_timer then
+        blink_timer:stop()
+        blink_timer:close()
+        blink_timer = nil
+    end
+end
+
+local function toggle_selection_highlight(buf, start_pos, end_pos, visible)
+    if not buf or not vim.api.nvim_buf_is_valid(buf) then return end
+    
+    -- Clear existing highlights
+    vim.api.nvim_buf_clear_namespace(buf, match_ns, start_pos[2] - 1, end_pos[2])
+    
+    -- Add highlight if visible is true
+    if visible then
+        for line = start_pos[2], end_pos[2] do
+            local col_start = line == start_pos[2] and start_pos[3] - 1 or 0
+            local col_end = line == end_pos[2] and end_pos[3] or -1
+            vim.api.nvim_buf_add_highlight(
+                buf,
+                match_ns,
+                config.blink_hl_group,
+                line - 1,
+                col_start,
+                col_end
+            )
+        end
+    end
+end
 
 ---@param opts? VisimatchConfig
 M.setup = function(opts)
+    clear_blink_timer()
+    
     config = vim.tbl_extend("force", config, opts or {})
     vim.validate({
         hl_group          = { config.hl_group,          "string" },
@@ -51,6 +100,9 @@ M.setup = function(opts)
         strict_spacing    = { config.strict_spacing,    "boolean" },
         buffers           = { config.buffers,           { "string", "function" } },
         case_insensitive  = { config.case_insensitive,  { "boolean", "table" } },
+        blink_enabled     = { config.blink_enabled,     "boolean" },
+        blink_interval    = { config.blink_interval,    "number" },
+        blink_hl_group    = { config.blink_hl_group,    "string" },
     })
 end
 
@@ -178,6 +230,9 @@ local augroup = vim.api.nvim_create_augroup("visimatch", { clear = true })
 vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
     group = augroup,
     callback = function()
+        -- clean existing blink timer
+        clear_blink_timer()
+        
         local wins = get_wins(config.buffers)
         for _, win in pairs(wins) do
             vim.api.nvim_buf_clear_namespace(vim.api.nvim_win_get_buf(win), match_ns, 0, -1)
@@ -193,6 +248,15 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
 
         if #selection > config.lines_upper_limit           then return end
         if #selection_collapsed < config.chars_lower_limit then return end
+
+        if config.blink_enabled then
+            blink_state = true
+            blink_timer = vim.loop.new_timer()
+            blink_timer:start(0, config.blink_interval, vim.schedule_wrap(function()
+                blink_state = not blink_state
+                toggle_selection_highlight(selection_buf, selection_start, selection_stop, blink_state)
+            end))
+        end
 
         local pattern = selection_collapsed:gsub("(%p)", "%%%0")
         if not config.strict_spacing then pattern = pattern:gsub("%s+", "%%s+") end
@@ -229,6 +293,14 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
             end
         end
     end
+})
+
+
+vim.api.nvim_create_autocmd("VimLeavePre", {
+    group = augroup,
+    callback = function()
+        clear_blink_timer()
+    end,
 })
 
 return M
