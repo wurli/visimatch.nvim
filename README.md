@@ -2,12 +2,18 @@
 
 A tiny plugin to highlight text matching the current selection in visual mode 💫
 
+![Uploading image.png…]()
+
 ![visimatch](https://github.com/user-attachments/assets/c9547434-950c-4205-945d-097481baf85e)
 
 Highlights are updated whenever the visual selection changes, but visimatch
 manages to do this without noticeable lag by only searching/applying highlights
 to the *visible* regions of buffers. This means that visimatch will continue to
 work smoothly even when editing very large files. It's magic!
+
+
+
+
 
 ## Installation
 
@@ -19,6 +25,9 @@ Using Lazy:
     opts = {}
 }
 ```
+
+
+
 
 ## Configuration / Features
 
