@@ -1,5 +1,8 @@
 local M = {}
 
+-- Create namespace at the top level
+local match_ns = vim.api.nvim_create_namespace("visimatch")
+
 ---@class VisimatchConfig
 ---
 ---The highlight group to apply to matched text; defaults to `Search`.
@@ -227,8 +230,6 @@ local is_case_insensitive = function(ft1, ft2)
     return false
 end
 
-
-local match_ns = vim.api.nvim_create_namespace("visimatch")
 local augroup = vim.api.nvim_create_augroup("visimatch", { clear = true })
 
 vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
