@@ -44,7 +44,7 @@ opts = {
     -- * `"all"`: highlight matches in all visible buffers
     -- * A function. This will be passed a buffer number and should return
     --   `true`/`false` to indicate whether the buffer should be highlighted.
-    buffers = "filetype"
+    buffers = "filetype",
     -- Case-(in)nsitivity for matches. Valid options:
     -- * `true`: matches will never be case-sensitive
     -- * `false`/`{}`: matches will always be case-sensitive
