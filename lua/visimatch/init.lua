@@ -1,3 +1,35 @@
+---Non-legacy validation spec (>=v0.11).
+--- ---
+---@class (exact) Visimatch.ValidateSpec
+---@field [1] any
+---@field [2] vim.validate.Validator
+---@field [3]? boolean
+---@field [4]? string
+
+---Dynamic `vim.validate()` wrapper. Covers both legacy and newer implementations.
+--- ---
+---@param T table<string, vim.validate.Spec|Visimatch.ValidateSpec>
+local validate = function(T)
+	local max = vim.fn.has("nvim-0.11") == 1 and 3 or 4
+	for name, spec in pairs(T) do
+		while #spec > max do
+			table.remove(spec, #spec)
+		end
+		T[name] = spec
+	end
+
+	if max == 3 then
+		---@cast T Visimatch.ValidateSpec
+		for name, spec in pairs(T) do
+			table.insert(spec, 1, name)
+			vim.validate(unpack(spec))
+		end
+	else
+		---@cast T table<string, vim.validate.Spec>
+		vim.validate(T)
+	end
+end
+
 local M = {}
 
 ---@class VisimatchConfig
@@ -45,7 +77,7 @@ local config = {
 ---@param opts? VisimatchConfig
 M.setup = function(opts)
     config = vim.tbl_extend("force", config, opts or {})
-    vim.validate({
+    validate({
         hl_group          = { config.hl_group,          "string" },
         chars_lower_limit = { config.chars_lower_limit, "number" },
         lines_upper_limit = { config.lines_upper_limit, "number" },
