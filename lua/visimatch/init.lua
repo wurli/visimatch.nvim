@@ -177,6 +177,11 @@ local augroup = vim.api.nvim_create_augroup("visimatch", { clear = true })
 vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
 	group = augroup,
 	callback = function()
+		local wins = get_wins(config.buffers)
+		for _, win in pairs(wins) do
+			vim.api.nvim_buf_clear_namespace(vim.api.nvim_win_get_buf(win), match_ns, 0, -1)
+		end
+
 		local mode = vim.fn.mode()
 		if mode ~= "v" and mode ~= "V" then
 			return
@@ -188,11 +193,6 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
 				print("mcursors found- returning")
 				return
 			end
-		end
-
-		local wins = get_wins(config.buffers)
-		for _, win in pairs(wins) do
-			vim.api.nvim_buf_clear_namespace(vim.api.nvim_win_get_buf(win), match_ns, 0, -1)
 		end
 
 		local selection_start, selection_stop = vim.fn.getpos("v"), vim.fn.getpos(".")
