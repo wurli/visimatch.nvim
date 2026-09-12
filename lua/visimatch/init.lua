@@ -190,7 +190,6 @@ vim.api.nvim_create_autocmd({ "CursorMoved", "ModeChanged" }, {
 		if vim.fn.has("nvim-0.13") == 1 then
 			local mc = vim.api.nvim_create_namespace("nvim.multicursor")
 			if #vim.api.nvim_buf_get_extmarks(0, mc, 0, -1, { limit = 1 }) > 0 then
-				print("mcursors found- returning")
 				return
 			end
 		end
